@@ -28,12 +28,18 @@ def create_app(config_name=None):
     @app.before_request
     def fix_proxy_headers():
         from flask import request
-        if request.headers.get('X-Forwarded-Proto'):
-            request.environ['wsgi.url_scheme'] = request.headers.get('X-Forwarded-Proto')
+        
         if request.headers.get('X-Forwarded-Port'):
             request.environ['SERVER_PORT'] = request.headers.get('X-Forwarded-Port')
+        
+        if request.headers.get('X-Forwarded-Proto'):
+            request.environ['wsgi.url_scheme'] = request.headers.get('X-Forwarded-Proto')
+        
         if request.headers.get('X-Forwarded-Host'):
             request.environ['HTTP_HOST'] = request.headers.get('X-Forwarded-Host')
+        
+        if request.headers.get('X-Forwarded-For'):
+            request.environ['REMOTE_ADDR'] = request.headers.get('X-Forwarded-For').split(',')[0].strip()
     
     # Basic security headers
     @app.after_request
