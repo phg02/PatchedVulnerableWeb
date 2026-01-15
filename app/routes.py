@@ -100,6 +100,21 @@ def allowed_file(filename):
 	"""Check if file extension is allowed for zip"""
 	return '.' in filename and filename.rsplit('.', 1)[1].lower() in ['zip']
 
+def get_external_url(endpoint):
+	"""Generate external URL that respects reverse proxy headers"""
+	base_url = url_for(endpoint, _external=False)
+	
+	forwarded_host = request.headers.get('X-Forwarded-Host')
+	forwarded_port = request.headers.get('X-Forwarded-Port')
+	forwarded_proto = request.headers.get('X-Forwarded-Proto', 'http')
+	
+	if forwarded_host and forwarded_port:
+		return f"{forwarded_proto}://{forwarded_host}:{forwarded_port}{base_url}"
+	elif forwarded_host:
+		return f"{forwarded_proto}://{forwarded_host}{base_url}"
+	else:
+		return url_for(endpoint, _external=True)
+
 
 @main_bp.route('/')
 def index():
@@ -137,8 +152,13 @@ def signin():
 		session['username'] = user['username']
 		session['role'] = user['role']
 		session.permanent = True
-		resp_redirect = url_for('main.admin_users') if user['role'] == 'admin' else url_for('main.index')
-		resp = make_response(redirect(resp_redirect))
+		
+		if user['role'] == 'admin':
+			redirect_url = get_external_url('main.admin_users')
+		else:
+			redirect_url = get_external_url('main.index')
+		
+		resp = make_response(redirect(redirect_url))
 		is_secure = os.environ.get('FLASK_ENV') == 'production'
 		resp.set_cookie('user_id', str(user['id']), httponly=True, secure=is_secure, samesite='Lax' if not is_secure else 'Strict')
 		resp.set_cookie('access_token', 'example-access-token', httponly=True, secure=is_secure, samesite='Lax' if not is_secure else 'Strict')
@@ -203,7 +223,7 @@ def signup():
 @main_bp.route('/logout')
 def logout():
 	session.clear()
-	resp = make_response(redirect(url_for('main.index')))
+	resp = make_response(redirect(get_external_url('main.index')))
 	resp.set_cookie('user_id', '', expires=0)
 	resp.set_cookie('access_token', '', expires=0)
 	resp.set_cookie('refresh_token', '', expires=0)
