@@ -2,6 +2,7 @@ from flask import Flask
 from flask_cors import CORS
 from config import config
 import os
+from werkzeug.proxy_fix import ProxyFix
 
 def create_app(config_name=None):
     """Application factory"""
@@ -11,11 +12,11 @@ def create_app(config_name=None):
     app = Flask(__name__)
     app.config.from_object(config.get(config_name, config['default']))
     
-    # Secure session configuration
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
+    
+    # Session configuration
     app.config['SESSION_COOKIE_HTTPONLY'] = True
-    is_production = os.environ.get('FLASK_ENV') == 'production'
-    app.config['SESSION_COOKIE_SECURE'] = is_production
-    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax' if not is_production else 'Strict'
+    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
     app.config['PERMANENT_SESSION_LIFETIME'] = 3600
     
     # Configure upload folder
@@ -23,42 +24,14 @@ def create_app(config_name=None):
     os.makedirs(UPLOAD_FOLDER, exist_ok=True)
     app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
     
-    # Restrict CORS to specific origins (update as needed)
-    CORS(app, resources={r"/*": {"origins": ["localhost", "127.0.0.1"]}}, supports_credentials=True)
+    # CORS configuration
+    CORS(app, resources={r"/*": {"origins": ["*"]}}, supports_credentials=True)
     
-    # Security headers middleware
+    # Basic security headers
     @app.after_request
     def set_security_headers(response):
-        # Content Security Policy - prevents XSS attacks
-        response.headers['Content-Security-Policy'] = (
-            "default-src 'self'; "
-            "script-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
-            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
-            "font-src 'self' https://fonts.gstatic.com; "
-            "img-src 'self' data: https:; "
-            "connect-src 'self'; "
-            "frame-ancestors 'none'; "
-            "form-action 'self'"
-        )
-        
-        # Prevent clickjacking attacks
-        response.headers['X-Frame-Options'] = 'DENY'
-        
-        # Prevent MIME type sniffing
         response.headers['X-Content-Type-Options'] = 'nosniff'
-        
-        # Enable XSS protection in older browsers
-        response.headers['X-XSS-Protection'] = '1; mode=block'
-        
-        # Referrer Policy
-        response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
-        
-        # Permissions Policy (formerly Feature-Policy)
-        response.headers['Permissions-Policy'] = 'geolocation=(), microphone=(), camera=()'
-        
-        # HSTS (HTTP Strict Transport Security)
-        response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
-        
+        response.headers['X-Frame-Options'] = 'DENY'
         return response
     
     # Register database functions
