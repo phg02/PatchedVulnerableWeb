@@ -2,7 +2,6 @@ from flask import Flask
 from flask_cors import CORS
 from config import config
 import os
-from werkzeug.proxy_fix import ProxyFix
 
 def create_app(config_name=None):
     """Application factory"""
@@ -11,8 +10,6 @@ def create_app(config_name=None):
     
     app = Flask(__name__)
     app.config.from_object(config.get(config_name, config['default']))
-    
-    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
     
     # Session configuration
     app.config['SESSION_COOKIE_HTTPONLY'] = True
