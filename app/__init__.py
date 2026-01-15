@@ -24,6 +24,17 @@ def create_app(config_name=None):
     # CORS configuration
     CORS(app, resources={r"/*": {"origins": ["*"]}}, supports_credentials=True)
     
+    # Middleware to handle proxy headers for URL generation
+    @app.before_request
+    def fix_proxy_headers():
+        from flask import request
+        if request.headers.get('X-Forwarded-Proto'):
+            request.environ['wsgi.url_scheme'] = request.headers.get('X-Forwarded-Proto')
+        if request.headers.get('X-Forwarded-Port'):
+            request.environ['SERVER_PORT'] = request.headers.get('X-Forwarded-Port')
+        if request.headers.get('X-Forwarded-Host'):
+            request.environ['HTTP_HOST'] = request.headers.get('X-Forwarded-Host')
+    
     # Basic security headers
     @app.after_request
     def set_security_headers(response):
