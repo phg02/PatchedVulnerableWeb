@@ -56,13 +56,9 @@ def is_safe_url(url):
 		return False
 
 def sanitize_html(text):
-	"""Sanitize HTML content to prevent XSS"""
-	allowed_tags = ['p', 'br', 'strong', 'em', 'u', 'a']
-	allowed_attrs = {'a': ['href', 'title']}
-	return bleach.clean(text, tags=allowed_tags, attributes=allowed_attrs, strip=True)
+	return bleach.clean(text, strip=True)
 
 def unzip(zip_file, extraction_path):
-	"""Unzip files from a zip file"""
 	try:
 		files = []
 		with zipfile.ZipFile(zip_file, "r") as z:
