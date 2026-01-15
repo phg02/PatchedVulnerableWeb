@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>URL Previewer - VulnerableWeb</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Kreon:wght@300..700&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&family=Kreon:wght@300..700&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/svg" href="{{ url_for('static', filename='image/logo.svg') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/todos.css') }}">
+  <style>
+    .container {
+      max-width: 1000px;
+      margin: 3rem auto;
+      padding: 2rem 1rem 0 1rem;
+    }
+
+    .header {
+      margin-bottom: 2rem;
+    }
+
+    .preview-section {
+      background-color: white;
+      border-radius: 8px;
+      padding: 2rem;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      margin-bottom: 2rem;
+    }
+
+    .preview-section h3 {
+      color: #333;
+      margin-bottom: 1.5rem;
+      font-size: 1.3rem;
+    }
+
+    .url-input-wrapper {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .url-input-wrapper input[type="text"] {
+      flex: 1;
+      min-width: 250px;
+      padding: 0.75rem;
+      border: 2px solid #ddd;
+      border-radius: 4px;
+      font-family: inherit;
+      font-size: 1rem;
+    }
+
+    .url-input-wrapper button {
+      padding: 0.75rem 1.5rem;
+      background-color: #2196F3;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: background-color 0.3s;
+    }
+
+    .url-input-wrapper button:hover {
+      background-color: #0b7dda;
+    }
+
+    .alert {
+      padding: 1rem;
+      border-radius: 4px;
+      margin-bottom: 1rem;
+      border-left: 4px solid;
+    }
+
+    .alert.error {
+      background-color: #ffebee;
+      color: #c62828;
+      border-color: #c62828;
+    }
+
+    .content-wrapper {
+      background-color: #f5f5f5;
+      border-radius: 8px;
+      padding: 1.5rem;
+      border: 1px solid #ddd;
+      max-height: 600px;
+      overflow-y: auto;
+    }
+
+    .content-wrapper iframe {
+      width: 100%;
+      height: 500px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+
+    .content-wrapper pre {
+      background-color: white;
+      padding: 1rem;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.9rem;
+      line-height: 1.6;
+      color: #333;
+      margin: 0;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+
+    .no-content {
+      color: #999;
+      text-align: center;
+      padding: 2rem;
+    }
+
+    .url-info {
+      color: #666;
+      font-size: 0.9rem;
+      margin-top: 1rem;
+      padding-top: 1rem;
+      border-top: 1px solid #ddd;
+    }
+  </style>
+</head>
+<body>
+  <nav aria-label="Main navigation">
+    <div class="nav-container">
+      <a class="brand" href="/" aria-label="VulnerableWeb Home">
+        <img src="{{ url_for('static', filename='image/logo.svg') }}" height="40" width="40" alt="VulnerableWeb Logo">
+        <h4>VulnerableWeb</h4>
+      </a>
+      <div class="nav-links">
+        <span class="welcome">Welcome {{ session.get('username')|escape }}</span>
+        {% if session.get('role') != 'admin' %}
+          <a class="link" href="/todos">Todos</a>
+          <a class="link" href="/notes">Notes</a>
+        {% else %}
+          <a class="link" href="/admin/users">Users</a>
+        {% endif %}
+        <a class="link" href="/upload">Files</a>
+        <a class="link" href="/ssrf">Preview URL</a>
+        <a class="link" href="/logout">Logout</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div class="header">
+      <h1>URL Content Previewer</h1>
+      <p class="subtitle">Fetch and preview content from any URL</p>
+    </div>
+
+    <div class="preview-section">
+      <h3>Enter URL to Preview</h3>
+      <form method="POST">
+        <div class="url-input-wrapper">
+          <input 
+            type="text" 
+            name="url" 
+            placeholder="Enter URL (e.g., https://example.com)" 
+            value="{{ url|escape }}"
+            required
+          >
+          <button type="submit" class="custom-btn">Preview</button>
+        </div>
+      </form>
+
+      {% if error %}
+        <div class="alert error">
+          {{ error|escape }}
+        </div>
+      {% endif %}
+
+      {% if content %}
+        <div>
+          <h4 style="color: #333; margin-bottom: 1rem;">Preview Content:</h4>
+          <div class="content-wrapper">
+            <iframe srcdoc="{{ content|escape }}" sandbox="allow-same-origin allow-scripts allow-popups"></iframe>
+          </div>
+          <div class="url-info">
+            <strong>URL:</strong> {{ url|escape }}<br>
+            <strong>Content Length:</strong> {{ content|length }} characters
+          </div>
+        </div>
+      {% elif url and not error %}
+        <div class="no-content">
+          Loading content...
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</body>
+</html>
