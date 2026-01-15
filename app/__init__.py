@@ -13,8 +13,9 @@ def create_app(config_name=None):
     
     # Secure session configuration
     app.config['SESSION_COOKIE_HTTPONLY'] = True
-    app.config['SESSION_COOKIE_SECURE'] = True
-    app.config['SESSION_COOKIE_SAMESITE'] = 'Strict'
+    is_production = os.environ.get('FLASK_ENV') == 'production'
+    app.config['SESSION_COOKIE_SECURE'] = is_production
+    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax' if not is_production else 'Strict'
     app.config['PERMANENT_SESSION_LIFETIME'] = 3600
     
     # Configure upload folder

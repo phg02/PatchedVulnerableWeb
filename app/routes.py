@@ -139,9 +139,10 @@ def signin():
 		session.permanent = True
 		resp_redirect = url_for('main.admin_users') if user['role'] == 'admin' else url_for('main.index')
 		resp = make_response(redirect(resp_redirect))
-		resp.set_cookie('user_id', str(user['id']), httponly=True, secure=True, samesite='Strict')
-		resp.set_cookie('access_token', 'example-access-token', httponly=True, secure=True, samesite='Strict')
-		resp.set_cookie('refresh_token', 'example-refresh-token', httponly=True, secure=True, samesite='Strict')
+		is_secure = os.environ.get('FLASK_ENV') == 'production'
+		resp.set_cookie('user_id', str(user['id']), httponly=True, secure=is_secure, samesite='Lax' if not is_secure else 'Strict')
+		resp.set_cookie('access_token', 'example-access-token', httponly=True, secure=is_secure, samesite='Lax' if not is_secure else 'Strict')
+		resp.set_cookie('refresh_token', 'example-refresh-token', httponly=True, secure=is_secure, samesite='Lax' if not is_secure else 'Strict')
 		return resp
 	
 	return render_template('signin.html', error='Invalid username or password')
